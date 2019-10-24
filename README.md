@@ -1,5 +1,7 @@
 # Telegram Doorman Bot
-In attempt to welcome and screen the newly joined group memebers.
+In attempt to give a cold welcome and screen any newly joined group memebers.
+
+Not really working yet.
 
 ## Setup
 
