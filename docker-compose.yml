@@ -1,0 +1,23 @@
+version: "3"
+
+services:
+  db:
+    container_name: doorman_db
+    image: "postgres:alpine"
+    env_file:
+      - db.env
+
+  bot:
+    container_name: doorman_bot
+    build: .
+    ports: 
+      - "127.0.0.1:8000:8000"
+    env_file:
+      - db.env
+      - bot.env
+    volumes:
+      - ./requirements.txt:/app/requirements.txt:ro
+      - ./entrypoint.sh:/app/entrypoint.sh:ro
+      - ./src/tg-doorman_bot:/app/bot:ro
+    entrypoint: /app/entrypoint.sh
+
