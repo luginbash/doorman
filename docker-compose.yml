@@ -1,12 +1,6 @@
 version: "3"
 
 services:
-  db:
-    container_name: doorman_db
-    image: "postgres:alpine"
-    env_file:
-      - db.env
-
   bot:
     container_name: doorman_bot
     build: .
