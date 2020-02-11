@@ -29,7 +29,19 @@ PERM_NO_NOTHING = telegram.ChatPermissions(
         , can_change_info=False
     )
 
+class DbMan(object):
+    def __init__(self,dbname):
+        self.conn = sqlite3.connect(dbname, check_same_thread=False)
+        self.conn.create_function('uuidgen',1,uuid.uuid4())
+        self.cur = self.conn.cursor()
 
+    def query(self, arg:str):
+        self.cur.execute(arg)
+        self.conn.commit()
+        return self.cur
+
+    def __del__(self):
+        self.conn.close()
 
 class BotCmd(object):
     def __init__(self):
@@ -59,6 +71,10 @@ class botGroupMsg(object):
 botcmd = BotCmd()
 groupMsg = botGroupMsg()
 
+
+import sqlite3
+import uuid
+
 @botcmd
 def start(bot, update):
     txt = "You have just pressed start, but nothing happened."
@@ -78,10 +94,8 @@ def ping(bot, update):
     message.edit_text(
         parse_mode="Markdown", text="Pong!\n**`%.3f`**" % dt.total_seconds())
 
-
 @groupMsg
 def welcome(update: telegram.Update, ctx: telegram.ext.CallbackContext):
-
     if update.message.new_chat_members:
         for usr in update.message.new_chat_members:
             ctx.bot.restrict_chat_member(
@@ -94,20 +108,22 @@ def welcome(update: telegram.Update, ctx: telegram.ext.CallbackContext):
                 , reply_to_message_id=update.message.message_id
                 , text='Prove that you\'re not a degenerate bot.'
             )
-            ctx.job_queue.run_once(callbackKick,
+            kickJob = ctx.job_queue.run_once(callbackKick,
                                    18,
                                    [update.message.chat_id
-                                       ,usr])
+                                       ,usr.id])
+
+
 
 
 def callbackKick(ctx:telegram.ext.CallbackContext):
-    ctx.bot.kick_chat_member(chat_id=ctx.job.context[1]
-                             , user_id=ctx.job.context[2])
+    ctx.bot.kick_chat_member(chat_id=ctx.job.context[0]
+                             , user_id=ctx.job.context[1])
 
 
 def main(token: str, listen_addr: str, port: int, hostname: str, useNgork: bool) -> None:
-
-    updater = Updater(token)
+    db = DbMan('quizes.db')
+    updater = Updater(token, use_context=True)
     j = updater.job_queue
 
     botcmd.register_onto(updater.dispatcher)
@@ -120,10 +136,11 @@ def main(token: str, listen_addr: str, port: int, hostname: str, useNgork: bool)
 
       webhook_url = f"https://{hostname}/{token}"
 
+    # todo(lug): load config in __main__
     with open('../config.json') as f:
         conf = json.load(f)
 
-    print(webhook_url)
+    # print(webhook_url)
     updater.start_webhook(
         listen=listen_addr,
         port=port,
